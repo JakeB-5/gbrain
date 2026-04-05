@@ -1,0 +1,32 @@
+{
+  "name": "gbrain",
+  "version": "0.1.0",
+  "description": "Postgres-native personal knowledge brain with hybrid RAG search",
+  "type": "module",
+  "main": "src/core/index.ts",
+  "bin": {
+    "gbrain": "src/cli.ts"
+  },
+  "exports": {
+    ".": "./src/core/index.ts",
+    "./engine": "./src/core/engine.ts",
+    "./types": "./src/core/types.ts"
+  },
+  "scripts": {
+    "dev": "bun run src/cli.ts",
+    "build": "bun build --compile --outfile bin/gbrain src/cli.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "gray-matter": "^4.0.3",
+    "openai": "^4.0.0",
+    "pgvector": "^0.2.0",
+    "postgres": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "license": "MIT"
+}
