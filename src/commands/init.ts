@@ -5,6 +5,7 @@ import { saveConfig, type GBrainConfig } from '../core/config.ts';
 export async function runInit(args: string[]) {
   const isSupabase = args.includes('--supabase');
   const isNonInteractive = args.includes('--non-interactive');
+  const jsonOutput = args.includes('--json');
   const urlIndex = args.indexOf('--url');
   const manualUrl = urlIndex !== -1 ? args[urlIndex + 1] : null;
   const keyIndex = args.indexOf('--key');
@@ -86,8 +87,12 @@ export async function runInit(args: string[]) {
   const stats = await engine.getStats();
   await engine.disconnect();
 
-  console.log(`\nBrain ready. ${stats.page_count} pages.`);
-  console.log('Next: gbrain import <dir> to migrate your markdown.');
+  if (jsonOutput) {
+    console.log(JSON.stringify({ status: 'success', pages: stats.page_count, config_path: '~/.gbrain/config.json' }));
+  } else {
+    console.log(`\nBrain ready. ${stats.page_count} pages.`);
+    console.log('Next: gbrain import <dir> to migrate your markdown.');
+  }
 }
 
 async function supabaseWizard(): Promise<string> {

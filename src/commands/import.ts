@@ -22,11 +22,12 @@ export async function runImport(engine: BrainEngine, args: string[]) {
   const dir = args.find(a => !a.startsWith('--'));
   const noEmbed = args.includes('--no-embed');
   const fresh = args.includes('--fresh');
+  const jsonOutput = args.includes('--json');
   const workersArg = args.find((a, i) => args[i - 1] === '--workers');
   const workerCount = workersArg ? parseInt(workersArg, 10) : 1;
 
   if (!dir) {
-    console.error('Usage: gbrain import <dir> [--no-embed] [--workers N] [--fresh]');
+    console.error('Usage: gbrain import <dir> [--no-embed] [--workers N] [--fresh] [--json]');
     process.exit(1);
   }
 
@@ -158,10 +159,18 @@ export async function runImport(engine: BrainEngine, args: string[]) {
   }
 
   const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
-  console.log(`\nImport complete (${totalTime}s):`);
-  console.log(`  ${imported} pages imported`);
-  console.log(`  ${skipped} pages skipped (${skipped - errors} unchanged, ${errors} errors)`);
-  console.log(`  ${chunksCreated} chunks created`);
+  if (jsonOutput) {
+    console.log(JSON.stringify({
+      status: 'success', duration_s: parseFloat(totalTime),
+      imported, skipped, errors, chunks: chunksCreated,
+      total_files: allFiles.length,
+    }));
+  } else {
+    console.log(`\nImport complete (${totalTime}s):`);
+    console.log(`  ${imported} pages imported`);
+    console.log(`  ${skipped} pages skipped (${skipped - errors} unchanged, ${errors} errors)`);
+    console.log(`  ${chunksCreated} chunks created`);
+  }
 
   // Log the ingest
   await engine.logIngest({
