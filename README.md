@@ -1,10 +1,24 @@
-# GBrain
+# GBrain (Local LLM Fork)
+
+> **Fork of [garrytan/gbrain](https://github.com/garrytan/gbrain)** — defaults to **local embedding** via Ollama + bge-m3. No OpenAI API key required for semantic search.
 
 Your AI agent is smart but it doesn't know anything about your life. GBrain fixes that. Meetings, emails, tweets, calendar events, voice calls, original ideas... all of it flows into a searchable knowledge base that your agent reads before every response and writes to after every conversation. The agent gets smarter every day.
 
-> **~30 minutes to a fully working brain.** Your agent does the work. Database ready in 2 seconds (PGLite, no server). Schema, import, embeddings, and integrations take 15-30 minutes depending on brain size. You just answer questions about API keys.
+> **~30 minutes to a fully working brain.** Your agent does the work. Database ready in 2 seconds (PGLite, no server). Schema, import, embeddings, and integrations take 15-30 minutes depending on brain size.
 >
 > **Requires a frontier model.** Tested with **Claude Opus 4.6** and **GPT-5.4 Thinking**. Likely to break with smaller models.
+
+### What's different in this fork
+
+| Feature | Upstream (garrytan/gbrain) | This fork |
+|---------|--------------------------|-----------|
+| **Embedding model** | OpenAI text-embedding-3-large (1536d) | Ollama bge-m3 (1024d) |
+| **Embedding API** | OpenAI hosted ($) | Local Ollama (free) |
+| **API key required** | `OPENAI_API_KEY` mandatory for vector search | None — works out of the box |
+| **Multilingual** | Good | Excellent (bge-m3 is multilingual-specialized) |
+| **Configuration** | Hard-coded provider | Configurable via env vars or config.json |
+
+**Fully backwards-compatible.** Set `GBRAIN_EMBEDDING_MODEL=text-embedding-3-large` + `GBRAIN_EMBEDDING_DIMENSIONS=1536` + `OPENAI_API_KEY=sk-...` to use OpenAI exactly like upstream.
 
 ## Need an AI agent first?
 
@@ -15,14 +29,14 @@ GBrain is designed to be installed and operated by an AI agent. If you don't hav
 
 ## Start here
 
-**https://github.com/garrytan/gbrain** — clone this repo into your agent's filesystem. It's home base for docs, skills, upgrades, and recipes. To upgrade later: `git pull origin main && bun install`.
+**https://github.com/JakeB-5/gbrain** — clone this repo into your agent's filesystem. It's home base for docs, skills, upgrades, and recipes. To upgrade later: `git pull origin main && bun install`.
 
-Copy this block into [OpenClaw](https://openclaw.ai), [Hermes](https://github.com/NousResearch/hermes-agent), or any persistent AI agent. The agent reads the docs, does the work, and asks you for API keys. ~30 minutes.
+Copy this block into [OpenClaw](https://openclaw.ai), [Hermes](https://github.com/NousResearch/hermes-agent), or any persistent AI agent. The agent reads the docs, does the work. No API keys needed for core search. ~30 minutes.
 
 ```
 INSTALL:
 
-  git clone https://github.com/garrytan/gbrain.git ~/gbrain && cd ~/gbrain
+  git clone https://github.com/JakeB-5/gbrain.git ~/gbrain && cd ~/gbrain
   curl -fsSL https://bun.sh/install | bash
   export PATH="$HOME/.bun/bin:$PATH"
   bun install && bun link
@@ -30,12 +44,21 @@ INSTALL:
   (If gbrain is not found, restart your shell or add the PATH export
   to your shell profile.)
 
-API KEYS — ask the user for these:
+LOCAL EMBEDDING (default — no API key needed):
 
-  export OPENAI_API_KEY=sk-...          # required for vector search
-  export ANTHROPIC_API_KEY=sk-ant-...   # optional, improves search quality
-  Save to shell profile or .env. Without OpenAI, keyword search still
-  works. Without Anthropic, search works but skips query expansion.
+  # Install Ollama (https://ollama.com) and pull the embedding model:
+  ollama pull bge-m3
+  # That's it. gbrain will use Ollama automatically.
+
+  # Optional: Anthropic key improves search quality via query expansion
+  export ANTHROPIC_API_KEY=sk-ant-...
+
+OPENAI EMBEDDING (optional — if you prefer hosted):
+
+  export GBRAIN_EMBEDDING_MODEL=text-embedding-3-large
+  export GBRAIN_EMBEDDING_DIMENSIONS=1536
+  export GBRAIN_EMBEDDING_BASE_URL=https://api.openai.com/v1
+  export OPENAI_API_KEY=sk-...
 
 SET UP THE BRAIN:
 
@@ -85,10 +108,12 @@ UPGRADE: cd ~/gbrain && git pull origin main && bun install
 ### Without an agent (standalone CLI)
 
 ```bash
-git clone https://github.com/garrytan/gbrain.git && cd gbrain && bun install && bun link
+git clone https://github.com/JakeB-5/gbrain.git && cd gbrain && bun install && bun link
+ollama pull bge-m3              # one-time: download embedding model
 gbrain init                     # local brain, ready in 2 seconds
 gbrain import ~/notes/          # index your markdown
-gbrain query "what themes show up across my notes?"
+gbrain embed --stale            # generate embeddings (local, free)
+gbrain query "what themes show up across my notes?" --no-expand
 ```
 
 ## Getting Data In
@@ -230,20 +255,46 @@ You take a meeting with someone. The agent writes a brain page for them, links i
 
 | Dependency | What it's for | How to get it |
 |------------|--------------|---------------|
-| **Supabase account** | Postgres + pgvector database | [supabase.com](https://supabase.com) (Pro tier, $25/mo for 8GB) |
-| **OpenAI API key** | Embeddings (text-embedding-3-large) | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
-| **Anthropic API key** | Multi-query expansion + LLM chunking (Haiku) | [console.anthropic.com](https://console.anthropic.com) |
+| **Ollama + bge-m3** | Local embeddings (default) | [ollama.com](https://ollama.com) then `ollama pull bge-m3` |
+| **Supabase account** | Postgres + pgvector database (optional) | [supabase.com](https://supabase.com) (Pro tier, $25/mo for 8GB) |
+| **OpenAI API key** | Hosted embeddings (optional alternative) | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
+| **Anthropic API key** | Multi-query expansion + LLM chunking (optional) | [console.anthropic.com](https://console.anthropic.com) |
 
-Set the API keys as environment variables:
+**Default (local, free):** Install Ollama and pull bge-m3. No environment variables needed.
+
+**Optional:** Set API keys for enhanced features:
 
 ```bash
-export OPENAI_API_KEY=sk-...
-export ANTHROPIC_API_KEY=sk-ant-...
+export ANTHROPIC_API_KEY=sk-ant-...   # better search via query expansion
 ```
 
-The Supabase connection URL is configured during `gbrain init --supabase`. The OpenAI and Anthropic SDKs read their keys from the environment automatically.
+The Supabase connection URL is configured during `gbrain init --supabase`.
 
-Without an OpenAI key, search still works (keyword only, no vector search). Without an Anthropic key, search still works (no multi-query expansion, no LLM chunking).
+Without Ollama running, embedding fails (start with `ollama serve`). Without an Anthropic key, search still works (use `--no-expand` to skip query expansion).
+
+#### Embedding provider configuration
+
+| Env var | Default | Description |
+|---------|---------|-------------|
+| `GBRAIN_EMBEDDING_MODEL` | `bge-m3` | Embedding model name |
+| `GBRAIN_EMBEDDING_DIMENSIONS` | `1024` | Vector dimensions |
+| `GBRAIN_EMBEDDING_BASE_URL` | `http://localhost:11434/v1` | OpenAI-compatible API endpoint |
+| `GBRAIN_EMBEDDING_API_KEY` | `ollama` | API key for the endpoint |
+
+Or set in `~/.gbrain/config.json`:
+
+```json
+{
+  "engine": "pglite",
+  "database_path": "/Users/you/.gbrain/brain.pglite",
+  "embedding": {
+    "model": "bge-m3",
+    "dimensions": 1024,
+    "base_url": "http://localhost:11434/v1",
+    "api_key": "ollama"
+  }
+}
+```
 
 ### GBrain without OpenClaw
 
@@ -254,10 +305,12 @@ GBrain works with any AI agent, any MCP client, or no agent at all. Three paths:
 Install globally and use gbrain from the terminal:
 
 ```bash
-bun add -g github:garrytan/gbrain
+bun add -g github:JakeB-5/gbrain
+ollama pull bge-m3              # one-time: download embedding model
 gbrain init                     # PGLite (local, no server needed)
 gbrain import ~/git/brain/      # index your markdown
-gbrain query "what themes show up across my notes?"
+gbrain embed --stale            # generate local embeddings
+gbrain query "what themes show up across my notes?" --no-expand
 ```
 
 Run `gbrain --help` for the full list of commands.
@@ -328,7 +381,7 @@ The skill markdown files in `skills/` are standalone instruction sets. Copy them
 #### As a TypeScript library
 
 ```bash
-bun add github:garrytan/gbrain
+bun add github:JakeB-5/gbrain
 ```
 
 ```typescript
@@ -514,7 +567,7 @@ content_chunks           Chunked content with embeddings
   page_id (FK)           Links to pages
   chunk_text             The chunk content
   chunk_source           'compiled_truth' or 'timeline'
-  embedding (vector)     1536-dim from text-embedding-3-large
+  embedding (vector)     1024-dim from bge-m3 (configurable)
   HNSW index             Cosine similarity search
 
 links                    Cross-references between pages
@@ -671,14 +724,14 @@ For a brain with ~7,500 pages:
 | Page text (compiled_truth + timeline) | ~150MB |
 | JSONB frontmatter + indexes | ~70MB |
 | Content chunks (~22K, text) | ~80MB |
-| Embeddings (22K x 1536 floats) | ~134MB |
+| Embeddings (22K x 1024 floats) | ~90MB |
 | HNSW index overhead | ~270MB |
 | Links, tags, timeline, versions | ~50MB |
-| **Total** | **~750MB** |
+| **Total** | **~700MB** |
 
 Supabase free tier (500MB) won't fit a large brain. Supabase Pro ($25/mo, 8GB) is the starting point.
 
-Initial embedding cost: ~$4-5 for 7,500 pages via OpenAI text-embedding-3-large.
+Initial embedding cost: **$0** with local Ollama + bge-m3. ~$4-5 for 7,500 pages if using OpenAI text-embedding-3-large.
 
 ## Docs
 
