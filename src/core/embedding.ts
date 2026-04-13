@@ -1,16 +1,33 @@
 /**
  * Embedding Service
- * Ported from production Ruby implementation (embedding_service.rb, 190 LOC)
  *
- * OpenAI text-embedding-3-large at 1536 dimensions.
+ * Configurable embedding provider — works with any OpenAI-compatible API.
+ *
+ * Default: Ollama with bge-m3 (local, free, multilingual).
+ * Override via env vars or ~/.gbrain/config.json:
+ *
+ *   GBRAIN_EMBEDDING_MODEL      (default: bge-m3)
+ *   GBRAIN_EMBEDDING_DIMENSIONS (default: 1024)
+ *   GBRAIN_EMBEDDING_BASE_URL   (default: http://localhost:11434/v1)
+ *   GBRAIN_EMBEDDING_API_KEY    (default: ollama)
+ *
+ * For OpenAI hosted embeddings:
+ *   GBRAIN_EMBEDDING_MODEL=text-embedding-3-large
+ *   GBRAIN_EMBEDDING_DIMENSIONS=1536
+ *   GBRAIN_EMBEDDING_BASE_URL=https://api.openai.com/v1
+ *   OPENAI_API_KEY=sk-...
+ *
  * Retry with exponential backoff (4s base, 120s cap, 5 retries).
  * 8000 character input truncation.
  */
 
 import OpenAI from 'openai';
+import { resolveEmbeddingConfig, loadConfig } from './config.ts';
 
-const MODEL = 'text-embedding-3-large';
-const DIMENSIONS = 1536;
+const embeddingConfig = resolveEmbeddingConfig(loadConfig());
+
+const MODEL = embeddingConfig.model;
+const DIMENSIONS = embeddingConfig.dimensions;
 const MAX_CHARS = 8000;
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 4000;
@@ -21,7 +38,10 @@ let client: OpenAI | null = null;
 
 function getClient(): OpenAI {
   if (!client) {
-    client = new OpenAI();
+    client = new OpenAI({
+      baseURL: embeddingConfig.base_url,
+      apiKey: embeddingConfig.api_key,
+    });
   }
   return client;
 }

@@ -7,12 +7,41 @@ import type { EngineConfig } from './types.ts';
 function getConfigDir() { return join(homedir(), '.gbrain'); }
 function getConfigPath() { return join(getConfigDir(), 'config.json'); }
 
+export interface EmbeddingConfig {
+  model: string;
+  dimensions: number;
+  base_url?: string;
+  api_key?: string;
+}
+
 export interface GBrainConfig {
   engine: 'postgres' | 'pglite';
   database_url?: string;
   database_path?: string;
   openai_api_key?: string;
   anthropic_api_key?: string;
+  embedding?: EmbeddingConfig;
+}
+
+/**
+ * Resolve embedding configuration with precedence: env vars > config file > defaults.
+ *
+ * Env vars:
+ *   GBRAIN_EMBEDDING_MODEL      — model name (default: bge-m3)
+ *   GBRAIN_EMBEDDING_DIMENSIONS — vector dimensions (default: 1024)
+ *   GBRAIN_EMBEDDING_BASE_URL   — OpenAI-compatible base URL (default: http://localhost:11434/v1)
+ *   GBRAIN_EMBEDDING_API_KEY    — API key (default: ollama)
+ *
+ * For OpenAI hosted: set OPENAI_API_KEY and GBRAIN_EMBEDDING_MODEL=text-embedding-3-large
+ */
+export function resolveEmbeddingConfig(config?: GBrainConfig | null): EmbeddingConfig {
+  const fileEmbed = config?.embedding;
+  return {
+    model: process.env.GBRAIN_EMBEDDING_MODEL || fileEmbed?.model || 'bge-m3',
+    dimensions: parseInt(process.env.GBRAIN_EMBEDDING_DIMENSIONS || String(fileEmbed?.dimensions || 1024), 10),
+    base_url: process.env.GBRAIN_EMBEDDING_BASE_URL || process.env.OPENAI_BASE_URL || fileEmbed?.base_url || 'http://localhost:11434/v1',
+    api_key: process.env.GBRAIN_EMBEDDING_API_KEY || process.env.OPENAI_API_KEY || fileEmbed?.api_key || 'ollama',
+  };
 }
 
 /**

@@ -6,6 +6,8 @@ export const SCHEMA_SQL = `
 
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
+-- gen_random_uuid() is core in Postgres 13+; enable pgcrypto as fallback for older versions
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ============================================================
 -- pages: the core content table
@@ -36,8 +38,8 @@ CREATE TABLE IF NOT EXISTS content_chunks (
   chunk_index   INTEGER NOT NULL,
   chunk_text    TEXT    NOT NULL,
   chunk_source  TEXT    NOT NULL DEFAULT 'compiled_truth',
-  embedding     vector(1536),
-  model         TEXT    NOT NULL DEFAULT 'text-embedding-3-large',
+  embedding     vector(1024),
+  model         TEXT    NOT NULL DEFAULT 'bge-m3',
   token_count   INTEGER,
   embedded_at   TIMESTAMPTZ,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -141,8 +143,8 @@ CREATE TABLE IF NOT EXISTS config (
 
 INSERT INTO config (key, value) VALUES
   ('version', '1'),
-  ('embedding_model', 'text-embedding-3-large'),
-  ('embedding_dimensions', '1536'),
+  ('embedding_model', 'bge-m3'),
+  ('embedding_dimensions', '1024'),
   ('chunk_strategy', 'semantic')
 ON CONFLICT (key) DO NOTHING;
 
